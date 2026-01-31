@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  category    String      @default("drink")
+  imageUrl    String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model User {
+  id            String          @id @default(cuid())
+  phone         String?         @unique
+  email         String?         @unique
+  name          String?
+  loyaltyPoints Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  orders        Order[]
+  loyaltyLedger LoyaltyLedger[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String?
+  user            User?       @relation(fields: [userId], references: [id])
+  storeId         String
+  store           Store       @relation(fields: [storeId], references: [id])
+  status          String      @default("pending") // pending, confirmed, preparing, ready, completed, cancelled
+  subtotal        Float
+  discount        Float       @default(0)
+  total           Float
+  voucherCode     String?
+  voucher         Voucher?    @relation(fields: [voucherCode], references: [code])
+  pointsEarned    Int         @default(0)
+  pointsUsed      Int         @default(0)
+  source          String      @default("customer") // customer, terminal, grab
+  grabOrderId     String?     @unique
+  grabOrder       GrabOrder?  @relation(fields: [grabOrderId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+  loyaltyLedger   LoyaltyLedger[]
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId  String
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id])
+  quantity    Int       @default(1)
+  price       Float
+  sweetness   String?   // normal, less, half, zero
+  ice         String?   // normal, less, no
+  addOns      String?   // JSON string of add-ons
+  notes       String?
+  createdAt   DateTime  @default(now())
+}
+
+model Voucher {
+  code          String   @id
+  title         String
+  description   String?
+  type          String   // percentage, fixed
+  value         Float
+  minOrderValue Float    @default(0)
+  maxDiscount   Float?
+  usageLimit    Int?
+  usageCount    Int      @default(0)
+  minOrders     Int      @default(0) // segment: minimum orders required
+  expiresAt     DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+}
+
+model LoyaltyLedger {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  points      Int      // positive for earned, negative for spent
+  balance     Int      // running balance after this transaction
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model GrabOrder {
+  id              String   @id @default(cuid())
+  grabOrderId     String   @unique
+  rawData         String   // JSON string of the entire Grab order
+  customerName    String?
+  customerPhone   String?
+  items           String   // JSON string of items
+  total           Float
+  status          String   @default("pending")
+  isImported      Boolean  @default(false)
+  importedOrderId String?  @unique
+  importedOrder   Order?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
