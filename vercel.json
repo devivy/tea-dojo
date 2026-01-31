@@ -1,0 +1,4 @@
+{
+  "buildCommand": "pnpm approve-builds && pnpm prisma generate && pnpm build",
+  "installCommand": "pnpm install"
+}
